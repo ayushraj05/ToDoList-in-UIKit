@@ -30,7 +30,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
-
+    
+    func applicationWillResignActive(_ application: UIApplication) {
+        // this happens when somethig other than app is trigred when the app is running
+        // ex- like a call or sms alert when the app is still running
+    }
+    
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        // when the app is running but in the background
+    }
+    
+    func applicationWillTerminate(_ application: UIApplication) {
+        // the app got terminate now :)
+    }
 
 }
 
