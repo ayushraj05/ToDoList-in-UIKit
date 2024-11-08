@@ -6,22 +6,23 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListViewController: UITableViewController {
     
     var itemArray = [Item]()
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
-
+    @IBOutlet weak var searchBar: UISearchBar!
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") ?? "")
+        
+        searchBar.delegate = self
         loadItems()
-//
-//        if let items = defaults.array(forKey: "ToDoListArray") as? [Item] {
-//            itemArray = items
-//        }
+
     }
     
     
@@ -48,6 +49,7 @@ class ToDoListViewController: UITableViewController {
     }
     
     
+    // MARK: - Tableview Delegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
@@ -59,7 +61,7 @@ class ToDoListViewController: UITableViewController {
     
     
     
-    // MARK:- add new item
+    // MARK: - add new item
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textFiled = UITextField()
@@ -68,8 +70,9 @@ class ToDoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { action in
             // add item button is pressed
             
-            let newItem = Item()
-            newItem.title = textFiled.text!
+            let newItem = Item(context: self.context)
+            newItem.title = textFiled.text ?? ""
+            newItem.done = false
             self.itemArray.append(newItem)
             self.saveItem()
             
@@ -86,28 +89,49 @@ class ToDoListViewController: UITableViewController {
     }
 
     func saveItem() {
-        let encoder = PropertyListEncoder()
-        do{
-            let data = try encoder.encode(self.itemArray)
-            try data.write(to: self.dataFilePath!)
+        do {
+            try context.save()
+            tableView.reloadData()
         } catch {
-            print("Error encoding the data \(error)")
+            print("Error saving data \(error)")
         }
-        self.tableView.reloadData()
-        
     }
     
     
-    func loadItems() {
-        if let data = try? Data(contentsOf: dataFilePath!) {
-            let decoder = PropertyListDecoder()
-            do {
-                itemArray = try decoder.decode([Item].self, from: data)
-            } catch {
-                print ("error is \(error)")
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
+        do {
+            itemArray = try context.fetch(request)
+            tableView.reloadData()
+        } catch {
+            print("Error fetching data from context \(error)")
+        }
+    }
+    
+
+}
+// MARK: - SearchBar methods
+extension ToDoListViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        // Safe unwrapping of the search bar text
+        if let searchText = searchBar.text, !searchText.isEmpty {
+            let request: NSFetchRequest<Item> = Item.fetchRequest()
+            request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchText)
+            request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+            
+            loadItems(with: request)
+        }
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        // Clear the search and reload all items if the search bar is empty
+        if searchText.isEmpty {
+            loadItems() // Load all items
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
             }
         }
     }
-
 }
+
 
